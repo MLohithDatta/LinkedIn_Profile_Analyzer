@@ -1,0 +1,177 @@
+---
+title: "LPO_Final_Project_File"
+author: "Lohith Datta Madamchetty"
+date: "2024-04-12"
+output: word_document
+---
+
+# **LinkedIn Profile Analyzer**
+
+## Motivation and Overview
+
+The LinkedIn Profile Analyzer project aims to address the critical need for data-driven insights into optimizing LinkedIn profiles for networking success. In today's digital age, professional networking plays a pivotal role in career growth, and understanding the relevance of one's profile to specific topics or articles can significantly enhance networking effectiveness.
+
+## Related Work
+
+The project draws inspiration from a diverse range of resources, namely articles like "<https://everyonesocial.com/blog/linkedin-profile-optimization/>" by everyone social, "<https://fastercapital.com/topics/optimizing-your-linkedin-profile-for-networking-success.html>" by faster capital. where these articles mainly talk about the critical need for optimizing the linkedin profiles for network success in modern world.
+
+## Initial Questions
+
+At the project's inception, the core question revolved around extracting pertinent information from LinkedIn profiles and evaluating their alignment with the articles. Over time, the inquiry evolved to encompass the efficacy of keyword matching in relevance scoring and the potential impact of profile optimization on networking outcomes.
+
+## Data
+
+The project utilizes LinkedIn profile data obtained through web scraping techniques facilitated by the "rvest" package in R. The data import and pre processing stages involved meticulous handling of HTML content, text extraction.Furthermore, a designated article URL served as a benchmark for relevance scoring.
+
+## Exploratory Data Analysis
+
+## Narrative and Summary
+
+The culmination of data analysis revealed valuable insights regarding profile relevance assessment and optimization strategies. The tool's ability to generate actionable suggestions for profile enhancement underscores its practical utility in facilitating networking success. Nonetheless, it is imperative to acknowledge the limitations inherent in keyword-based evaluations and the necessity for continuous refinement through user feedback and validation processes.
+
+## *Project R Code*
+
+```{r}
+library(shiny)
+library(rvest)
+library(stringr)
+
+# Function to extract text content from a LinkedIn profile link
+extract_linkedin_content <- function(linkedin_link) {
+  # Extract text from the LinkedIn profile page
+  linkedin_page <- read_html(linkedin_link)
+  profile_content <- linkedin_page %>%
+    html_nodes(".pv-about-section .pv-about__summary-text") %>%
+    html_text() %>%
+    paste(collapse = " ")
+  return(profile_content)
+}
+
+# Function to calculate relevance score
+calculate_score <- function(profile_content, article_url) {
+  # Load the article content
+  article <- read_html(article_url)
+  article_text <- article %>%
+    html_nodes("article") %>%
+    html_text() %>%
+    paste(collapse = " ")
+  
+  # Simple scoring based on keyword matching
+  keywords <- c("LinkedIn", "networking", "profile", "success")
+  match_count <- sum(str_count(tolower(profile_content), tolower(keywords)))
+  total_score <- match_count / length(keywords)
+  
+  return(total_score)
+}
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("LinkedIn Profile Analyzer", windowTitle = "Profile Analyzer"),
+  tags$head(
+    tags$style(HTML("
+      body {
+        background: linear-gradient(to bottom right, #6A0DAD, #CC5500); /* Gradient background */
+        font-family: Calibri, sans-serif; /* Set font family to Calibri */
+        font-weight: bold; /* Bold text */
+        font-size: 16px; /* Larger font size */
+        color: #333; /* White font color */
+        margin: 0; /* Remove default body margin */
+        padding: 20px; /* Remove default body padding */
+      }
+      .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #0056b3;
+        color: #fff;
+      }
+      .intro-text {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .help-text {
+        font-size: 12px;
+        color: #777;
+      }
+      .analysis-results {
+        font-size: 16px;
+        color: green;
+        font-weight: bold;
+      }
+      .suggestions {
+        font-size: 16px;
+        color: red;
+        font-weight: bold;
+      }
+    "))
+  ),
+  sidebarLayout(
+    sidebarPanel(
+      tags$img(src = "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png", width = 150),
+      tags$hr(),
+      textInput("linkedin_link", "Enter LinkedIn Profile Link"),
+      actionButton("analyze_button", "Analyze Profile", class = "btn-primary"),
+      tags$hr(),
+      tags$div(
+        class = "intro-text",
+        "Please make sure to enter a valid LinkedIn profile link."
+      ),
+      tags$div(
+        class = "help-text",
+        "Example: https://www.linkedin.com/in/yourprofile"
+      ),
+      tags$div(
+        class = "help-text",
+        "Analysis may take a few seconds to complete."
+      )
+    ),
+    mainPanel(
+      h3("Analysis Results", style = "color: #333;"),
+      tags$hr(),
+      class = "analysis-results",
+      verbatimTextOutput("score_output"),
+
+      h4("Suggestions:", style = "color: #333;"),
+      tags$hr(),
+      class = "suggestions",
+      verbatimTextOutput("suggestions_output")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+  observeEvent(input$analyze_button, {
+    profile_link <- input$linkedin_link
+    
+    if (grepl("^https://www.linkedin.com", profile_link)) {
+      profile_content <- extract_linkedin_content(profile_link)
+      score <- calculate_score(profile_content, "https://everyonesocial.com/blog/linkedin-profile-optimization/")
+      
+      output$score_output <- renderText(paste("Relevance Score:", round(score * 100, 2), "%"))
+      
+      # Suggestions based on score
+      if (score >= 25) {
+        suggestions <- "Make your profile shine!Headline & About: Craft a compelling headline with keywords and achievements. Rewrite your About section to tell your professional story with strong verbs and quantifiable results.
+        Experience: Highlight your impact! Include descriptions in your work experience showcasing key achievements and the value you brought to each role.
+        Get Discovered: Use relevant keywords throughout your profile to boost searchability. Expand your network by connecting with industry professionals.."
+      } else {
+        suggestions <- "Your profile may need more alignment with the content of the article. Try to incorporate more keywords related to networking success."
+      }
+      
+      output$suggestions_output <- renderText(suggestions)
+    } else {
+      output$score_output <- renderText("Please enter a valid LinkedIn profile link.")
+      output$suggestions_output <- renderText(NULL)
+    }
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+```
